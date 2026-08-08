@@ -28,6 +28,20 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      - name: Check environment
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          echo "BASE_URL=$BASE_URL"
+          echo "TEST_EMAIL=$TEST_EMAIL"
+          echo "PASSWORD_SET=$([ -n "$TEST_PASSWORD" ] && echo true || echo false)"
+
+      - name: Check UAT
+        run: |
+          curl -I --max-time 20 https://uat-cloud.restroorder.com
+
       - name: Run Playwright tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
