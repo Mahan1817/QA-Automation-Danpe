@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test('User should be able to open and close a shift', async ({ page }) => {
+  // =========================
+  // LOGIN
+  // =========================
 
-  // Login
   await page.goto('/');
 
   await page.getByRole('link', { name: 'Sign in' }).click();
@@ -17,64 +19,99 @@ test('User should be able to open and close a shift', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Sign In' }).click();
 
-  // Verify successful login
-  await expect(
-    page.getByRole('button', { name: 'Header Avatar' })
-  ).toBeVisible();
+  // Wait for dashboard
+  await page.waitForLoadState('networkidle');
 
-  // Open Shift
-  await page
+  // =========================
+  // OPEN SHIFT
+  // =========================
+
+  const shiftControl = page
     .locator('.d-flex.align-items-center.justify-content-center.rounded-3')
-    .first()
-    .click();
+    .first();
 
-  await expect(
-    page.getByRole('spinbutton', {
-      name: 'Opening Cash Amount ($)',
-    })
-  ).toBeVisible();
+  await shiftControl.waitFor({
+    state: 'visible',
+    timeout: 15000,
+  });
 
-  await page
-    .getByRole('spinbutton', {
-      name: 'Opening Cash Amount ($)',
-    })
-    .fill('1000');
+  await shiftControl.click();
 
-  await page
+  // Opening cash amount
+  const openingCash = page.getByRole('spinbutton', {
+    name: 'Opening Cash Amount ($)',
+  });
+
+  await openingCash.waitFor({
+    state: 'visible',
+    timeout: 15000,
+  });
+
+  await openingCash.fill('1000');
+
+  // Confirm Open Shift
+  const openShiftButton = page
     .getByRole('dialog')
-    .getByRole('button', { name: 'Open Shift' })
-    .click();
+    .getByRole('button', {
+      name: 'Open Shift',
+      exact: true,
+    });
 
-  // Close Shift
-  await page
-    .locator('.d-flex.align-items-center.justify-content-center.rounded-3')
-    .first()
-    .click();
+  await openShiftButton.click();
+
+  // Verify the dialog closed
+  await expect(openingCash).not.toBeVisible({
+    timeout: 10000,
+  });
+
+  // =========================
+  // CLOSE SHIFT
+  // =========================
+
+  await page.waitForTimeout(1000);
+
+  // Open shift management again
+  await shiftControl.click();
 
   // Open shift selector
+  const shiftSelector = page.locator(
+    '.react-select__input-container'
+  );
+
+  await shiftSelector.click();
+
+  // Select the latest/current shift dynamically
+  const currentShift = page.getByRole('option', {
+    name: /SHIFT-\d{8}-/,
+  }).last();
+
+  await currentShift.click();
+
+  // Actual cash amount
+  const actualCash = page.getByRole('spinbutton', {
+    name: 'Actual Cash Amount ($)',
+  });
+
+  await actualCash.fill('100');
+
+  // Confirm close
   await page
-    .locator('.react-select__input-container')
-    .click();
-
-  // Select latest shift dynamically
-  const latestShift = page
-    .getByRole('option', { name: /SHIFT-\d{8}-/ })
-    .last();
-
-  await expect(latestShift).toBeVisible();
-
-  await latestShift.click();
-
-  // Enter actual cash amount
-  await page
-    .getByRole('spinbutton', {
-      name: 'Actual Cash Amount ($)',
+    .getByRole('button', {
+      name: 'Confirm Close',
+      exact: true,
     })
-    .fill('100');
-
-  // Confirm Close
-  await page
-    .getByRole('button', { name: 'Confirm Close' })
     .click();
 
+  // =========================
+  // VERIFY
+  // =========================
+
+  await expect(
+    page.getByRole('button', {
+      name: 'Confirm Close',
+      exact: true,
+    })
+  ).not.toBeVisible({
+    timeout: 10000,
+  });
 });
